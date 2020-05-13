@@ -3,6 +3,7 @@ import sys
 from copy import deepcopy
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db import transaction, IntegrityError
@@ -13,6 +14,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template import loader
 from django.template.exceptions import TemplateDoesNotExist
 from django.urls import reverse
+from django.utils.decorators import method_decorator
 from django.utils.html import escape
 from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
@@ -24,7 +26,7 @@ from django_tables2 import RequestConfig
 from extras.models import CustomField, CustomFieldValue, ExportTemplate
 from extras.querysets import CustomFieldQueryset
 from utilities.exceptions import AbortTransaction
-from utilities.forms import BootstrapMixin, CSVDataField
+from utilities.forms import BootstrapMixin, CSVDataField, TableConfigForm
 from utilities.utils import csv_format, prepare_cloned_fields
 from .error_handlers import handle_protectederror
 from .forms import ConfirmationForm, ImportForm
@@ -164,7 +166,11 @@ class ObjectListView(View):
             permissions[action] = request.user.has_perm(perm_name)
 
         # Construct the table based on the user's permissions
-        table = self.table(self.queryset)
+        if request.user.is_authenticated:
+            columns = request.user.config.get(f"tables.{self.table.__name__}.columns")
+        else:
+            columns = None
+        table = self.table(self.queryset, columns=columns)
         if 'pk' in table.base_columns and (permissions['change'] or permissions['delete']):
             table.columns.show('pk')
 
@@ -180,11 +186,29 @@ class ObjectListView(View):
             'table': table,
             'permissions': permissions,
             'action_buttons': self.action_buttons,
+            'table_config_form': TableConfigForm(table=table),
             'filter_form': self.filterset_form(request.GET, label_suffix='') if self.filterset_form else None,
         }
         context.update(self.extra_context())
 
         return render(request, self.template_name, context)
+
+    @method_decorator(login_required)
+    def post(self, request):
+
+        # Update the user's table configuration
+        table = self.table(self.queryset)
+        form = TableConfigForm(table=table, data=request.POST)
+        preference_name = f"tables.{self.table.__name__}.columns"
+
+        if form.is_valid():
+            if 'set' in request.POST:
+                request.user.config.set(preference_name, form.cleaned_data['columns'], commit=True)
+            elif 'clear' in request.POST:
+                request.user.config.clear(preference_name, commit=True)
+            messages.success(request, "Your preferences have been updated.")
+
+        return redirect(request.get_full_path())
 
     def alter_queryset(self, request):
         # .all() is necessary to avoid caching queries
@@ -557,11 +581,11 @@ class BulkImportView(GetReturnURLMixin, View):
 
     def _import_form(self, *args, **kwargs):
 
-        fields = self.model_form().fields.keys()
-        required_fields = [name for name, field in self.model_form().fields.items() if field.required]
-
         class ImportForm(BootstrapMixin, Form):
-            csv = CSVDataField(fields=fields, required_fields=required_fields, widget=Textarea(attrs=self.widget_attrs))
+            csv = CSVDataField(
+                from_form=self.model_form,
+                widget=Textarea(attrs=self.widget_attrs)
+            )
 
         return ImportForm(*args, **kwargs)
 
@@ -591,8 +615,10 @@ class BulkImportView(GetReturnURLMixin, View):
             try:
                 # Iterate through CSV data and bind each row to a new model form instance.
                 with transaction.atomic():
-                    for row, data in enumerate(form.cleaned_data['csv'], start=1):
-                        obj_form = self.model_form(data)
+                    headers, records = form.cleaned_data['csv']
+                    for row, data in enumerate(records, start=1):
+                        obj_form = self.model_form(data, headers=headers)
+
                         if obj_form.is_valid():
                             obj = self._save_obj(obj_form, request)
                             new_objs.append(obj)

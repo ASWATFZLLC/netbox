@@ -1,12 +1,35 @@
 # NetBox v2.8
 
-## v2.8.2 (FUTURE)
+v2.8.4 (FUTURE)
+
+### Bug Fixes
+
+* [#4598](https://github.com/netbox-community/netbox/issues/4598) - Display error message when invalid cable length is specified
+* [#4604](https://github.com/netbox-community/netbox/issues/4604) - Multi-position rear ports may only be connected to other rear ports
+* [#4607](https://github.com/netbox-community/netbox/issues/4607) - Missing Contextual help for API Tokens
+
+---
+
+## v2.8.3 (2020-05-06)
+
+### Bug Fixes
+
+* [#4593](https://github.com/netbox-community/netbox/issues/4593) - Fix AttributeError exception when viewing object lists as a non-authenticated user
+
+---
+
+## v2.8.2 (2020-05-06)
 
 ### Enhancements
 
+* [#492](https://github.com/netbox-community/netbox/issues/492) - Enable toggling and rearranging table columns
+* [#3147](https://github.com/netbox-community/netbox/issues/3147) - Allow specifying related objects by arbitrary attribute during CSV import
+* [#3064](https://github.com/netbox-community/netbox/issues/3064) - Include tags in object lists as a toggleable table column
 * [#3294](https://github.com/netbox-community/netbox/issues/3294) - Implement mechanism for storing user preferences
 * [#4421](https://github.com/netbox-community/netbox/issues/4421) - Retain user's preference for config context format
+* [#4502](https://github.com/netbox-community/netbox/issues/4502) - Enable configuration of proxies for outbound HTTP requests
 * [#4531](https://github.com/netbox-community/netbox/issues/4531) - Retain user's preference for page length
+* [#4554](https://github.com/netbox-community/netbox/issues/4554) - Add ServerTech's HDOT Cx power outlet type
 
 ### Bug Fixes
 
@@ -15,6 +38,9 @@
 * [#4548](https://github.com/netbox-community/netbox/issues/4548) - Fix tracing cables through a single RearPort
 * [#4549](https://github.com/netbox-community/netbox/issues/4549) - Fix encoding unicode webhook body data
 * [#4556](https://github.com/netbox-community/netbox/issues/4556) - Update form for adding devices to clusters
+* [#4578](https://github.com/netbox-community/netbox/issues/4578) - Prevent setting 0U height on device type with racked instances
+* [#4584](https://github.com/netbox-community/netbox/issues/4584) - Ensure consistent support for filtering objects by `id` across all REST API endpoints
+* [#4588](https://github.com/netbox-community/netbox/issues/4588) - Restore ability to add/remove tags on services, virtual chassis in bulk
 
 ---
 
